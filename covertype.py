@@ -41,7 +41,6 @@ ct.isna().sum()
 sns.countplot(data=ct, x='Cover_Type')
 
 ## Aplicando o StandardScaler
-
 cols = ['Elevation', 'Aspect', 'Slope', 'Horizontal_Distance_To_Hydrology', 
         'Vertical_Distance_To_Hydrology', 'Horizontal_Distance_To_Roadways', 
         'Hillshade_9am', 'Hillshade_Noon', 'Hillshade_3pm', 'Horizontal_Distance_To_Fire_Points']
@@ -68,6 +67,7 @@ with open("covertype.plk", mode='wb') as f:
 
 ###### Executando ######
 import pickle
+import numpy as np
 from sklearn.naive_bayes import GaussianNB
 from sklearn.metrics import accuracy_score
 from yellowbrick.classifier import ConfusionMatrix
@@ -77,6 +77,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 from sklearn.neural_network import MLPClassifier
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import GridSearchCV
 
 ## Abrindo pickle
 with open("covertype.plk", 'rb') as f:
@@ -105,7 +106,7 @@ cm.score(X_test, y_test)
 
 
 ## Random Forrest
-random_forest_cover = RandomForestClassifier(n_estimators=40, criterion='entropy', random_state=0)
+random_forest_cover = RandomForestClassifier(n_estimators=150, criterion='entropy', random_state=0)
 random_forest_cover.fit(X_train, y_train)
 previsoes = random_forest_cover.predict(X_test)
 accuracy_score(y_test, previsoes)
@@ -153,6 +154,66 @@ cm.fit(X_train, y_train)
 cm.score(X_test, y_test)
 
 
+#Unindo base
+X_all = np.concatenate((X_train, X_test), axis=0)
+y_all = np.concatenate((y_train, y_test), axis=0)
+
+#Diminuindo tamanho para melhorar o desempenho
+X = X_all[:10000]
+y = y_all[:10000]
+
+
+### GridSearch
+## Arvore descião
+params = {
+    'criterion': ['gini','entropy'],
+    'splitter': ['best', 'random'],
+    'min_samples_split': [2,5],
+    'min_samples_leaf': [1,5]}
+grid_search = GridSearchCV(estimator=DecisionTreeClassifier(), param_grid=params)
+grid_search.fit(X_all, y_all)
+best_result = grid_search.best_score_
+best_params = grid_search.best_params_
+
+
+#Random Forest
+params = {
+    'criterion': ['gini','entropy'],
+    'n_estimators': [10,40],
+    'min_samples_split': [2,5],
+    'min_samples_leaf': [1,5]}
+grid_search = GridSearchCV(estimator=RandomForestClassifier(), param_grid=params)
+grid_search.fit(X, y)
+best_result = grid_search.best_score_
+best_params = grid_search.best_params_
+
+#KNN
+params = {'n_neighbors': [3,5,10,20],
+          'p':[1,2]}
+grid_search = GridSearchCV(estimator=KNeighborsClassifier(), param_grid=params)
+grid_search.fit(X, y)
+best_result = grid_search.best_score_
+best_params = grid_search.best_params_
+
+
+##SVM
+params = {'tol': [0.001,0.0001,0.00001],
+          'C':[1,1.5,2],
+          'kernel':['rbg','linear','poly','sigmoid']}
+grid_search = GridSearchCV(estimator=SVC(), param_grid=params)
+grid_search.fit(X, y)
+best_result = grid_search.best_score_
+best_params = grid_search.best_params_
+
+
+##Redes Neurais
+params = {'activation': ['relu','logistic','tahn'],
+          'solver': ['adam','sgd'],
+          'batch_size': [10,60]}
+grid_search = GridSearchCV(estimator=MLPClassifier(), param_grid=params)
+grid_search.fit(X, y)
+best_result = grid_search.best_score_
+best_params = grid_search.best_params_
 
 
 
